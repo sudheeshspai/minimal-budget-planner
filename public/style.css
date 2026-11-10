@@ -380,6 +380,89 @@ button {
   color: var(--danger);
 }
 
+/* --- Monthly Budget Target Banner --- */
+.budget-target-banner {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px 18px;
+  margin-bottom: 24px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.target-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.target-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.target-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.target-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.target-right {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.target-stats {
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.target-progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: var(--border-color);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.target-progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background-color: var(--primary);
+  transition: width 0.4s ease, background-color 0.4s ease;
+}
+
+.btn-action-tx {
+  opacity: 0.4;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 4px;
+  border-radius: 4px;
+  transition: var(--transition);
+}
+
+.tx-item:hover .btn-action-tx {
+  opacity: 0.8;
+}
+
+.btn-action-tx:hover {
+  opacity: 1 !important;
+  color: var(--primary);
+  background-color: var(--primary-light);
+}
+
 /* --- Dashboard Layout --- */
 .dashboard-columns {
   display: grid;
