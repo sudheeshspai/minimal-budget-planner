@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Minimal Budget Planner</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="14" x="2" y="5" rx="3"/>
+            <line x1="2" x2="22" y1="10" y2="10"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Budget Planner</h1>
+          <span class="subtitle">Minimal & Real SQLite Database</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Month Filter -->
+        <div class="input-with-icon month-selector">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <input type="month" id="monthFilter" title="Filter by month">
+        </div>
+
+        <!-- Currency Selector -->
+        <select id="currencySelector" class="currency-select" title="Change currency symbol">
+          <option value="$">$ (USD)</option>
+          <option value="₹">₹ (INR)</option>
+          <option value="€">€ (EUR)</option>
+          <option value="£">£ (GBP)</option>
+          <option value="¥">¥ (JPY)</option>
+          <option value="C$">C$ (CAD)</option>
+          <option value="A$">A$ (AUD)</option>
+        </select>
+
+        <!-- Theme Toggle -->
+        <button id="themeToggleBtn" class="btn btn-icon" title="Toggle Dark/Light Mode">
+          <span id="themeIcon">🌙</span>
+        </button>
+
+        <!-- Export CSV -->
+        <a href="/api/export" class="btn btn-secondary btn-sm" download title="Export transactions to CSV">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export CSV
+        </a>
+
+        <!-- Clear DB -->
+        <button id="clearDbBtn" class="btn btn-outline-danger btn-sm" onclick="clearAllData()" title="Clear all transactions in database">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          Clear DB
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Overview Cards -->
+    <section class="cards-grid">
+      <!-- Balance Card -->
+      <div class="stat-card balance-card">
+        <div class="card-header">
+          <span class="card-label">Current Balance</span>
+          <span class="status-badge" id="balanceStatus">Good Standing</span>
+        </div>
+        <div class="card-amount font-mono" id="totalBalance">$0.00</div>
+        <div class="card-meta">
+          <span>Net saved after all expenses</span>
+        </div>
+        <div class="card-quick-actions">
+          <button class="btn btn-primary btn-add-money" onclick="openAddModal('income')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Money
+          </button>
+          <button class="btn btn-danger-subtle" onclick="openAddModal('expense')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Expense
+          </button>
+        </div>
+      </div>
+
+      <!-- Total Income Card -->
+      <div class="stat-card income-card">
+        <div class="card-header">
+          <span class="card-label">Total Added (Income)</span>
+          <div class="icon-bubble income-bubble">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="7 17 17 7"/>
+              <polyline points="7 7 17 7 17 17"/>
+            </svg>
+          </div>
+        </div>
+        <div class="card-amount text-success font-mono" id="totalIncome">$0.00</div>
+        <div class="card-meta">
+          <span id="incomeCount">0 deposits</span>
+        </div>
+      </div>
+
+      <!-- Total Spent Card -->
+      <div class="stat-card expense-card">
+        <div class="card-header">
+          <span class="card-label">Total Spent (Expenses)</span>
+          <div class="icon-bubble expense-bubble">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <polyline points="17 7 7 17"/>
+              <polyline points="17 17 7 17 7 7"/>
+            </svg>
+          </div>
+        </div>
+        <div class="card-amount text-danger font-mono" id="totalExpense">$0.00</div>
+        <div class="card-meta">
+          <span id="expenseCount">0 purchases</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content Layout -->
+    <div class="dashboard-columns">
+      <!-- Left Column: Spending Breakdown ("What Spent for What") -->
+      <section class="panel breakdown-panel">
+        <div class="panel-header">
+          <div>
+            <h2>What I Spent For What</h2>
+            <p class="panel-subtitle">Expense distribution by category</p>
+          </div>
+          <span class="badge" id="categoryCountBadge">0 categories</span>
+        </div>
+
+        <div id="breakdownContainer" class="breakdown-list">
+          <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <p>No expenses recorded yet.</p>
+            <span>Add an expense to see what you spend your money on.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Transactions History -->
+      <section class="panel transactions-panel">
+        <div class="panel-header">
+          <div>
+            <h2>Transaction History</h2>
+            <p class="panel-subtitle">Saved in SQLite database</p>
+          </div>
+          <div class="quick-btns">
+            <button class="btn btn-sm btn-primary" onclick="openAddModal('income')">+ Money</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="openAddModal('expense')">- Expense</button>
+          </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="filter-toolbar">
+          <div class="tabs">
+            <button class="tab-btn active" data-type="all">All</button>
+            <button class="tab-btn" data-type="expense">Expenses</button>
+            <button class="tab-btn" data-type="income">Income</button>
+          </div>
+
+          <div class="search-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Search what you spent on...">
+          </div>
+
+          <select id="categoryFilter" class="filter-select">
+            <option value="all">All Categories</option>
+          </select>
+        </div>
+
+        <!-- Transactions List -->
+        <div id="transactionsList" class="transactions-list">
+          <div class="loading-state">Loading transactions...</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Modal for Adding Money / Expense -->
+  <div id="transactionModal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">Add Money</h3>
+        <button class="btn-close" onclick="closeModal()">×</button>
+      </div>
+
+      <form id="transactionForm" onsubmit="handleFormSubmit(event)">
+        <!-- Type Switcher -->
+        <div class="modal-type-switcher">
+          <label class="type-radio">
+            <input type="radio" name="modalType" value="income" id="typeIncome" onchange="updateModalFormType()">
+            <span class="type-pill income-pill">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 17 17 7"/><polyline points="7 7 17 7 17 17"/></svg>
+              Add Money (Income)
+            </span>
+          </label>
+          <label class="type-radio">
+            <input type="radio" name="modalType" value="expense" id="typeExpense" onchange="updateModalFormType()">
+            <span class="type-pill expense-pill">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="17 7 7 17"/><polyline points="17 17 7 17 7 7"/></svg>
+              Spent (Expense)
+            </span>
+          </label>
+        </div>
+
+        <!-- Amount Input with Quick Preset Buttons -->
+        <div class="form-group">
+          <label for="amountInput">Amount (<span class="currency-label">$</span>)</label>
+          <div class="amount-input-wrapper">
+            <span class="currency-prefix currency-label">$</span>
+            <input type="number" id="amountInput" step="0.01" min="0.01" placeholder="0.00" required autofocus>
+          </div>
+          <!-- Quick Preset Chips -->
+          <div class="quick-presets" id="quickPresets">
+            <button type="button" class="preset-chip" onclick="setQuickAmount(10)">+10</button>
+            <button type="button" class="preset-chip" onclick="setQuickAmount(50)">+50</button>
+            <button type="button" class="preset-chip" onclick="setQuickAmount(100)">+100</button>
+            <button type="button" class="preset-chip" onclick="setQuickAmount(500)">+500</button>
+            <button type="button" class="preset-chip" onclick="setQuickAmount(1000)">+1,000</button>
+          </div>
+        </div>
+
+        <!-- Description: "What is this for?" -->
+        <div class="form-group">
+          <label for="descInput" id="descLabel">What was this for? (Description)</label>
+          <input type="text" id="descInput" placeholder="e.g. Grocery shopping, Electricity bill, Salary" required>
+        </div>
+
+        <!-- Category Dropdown or Custom -->
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="catSelect">Category</label>
+            <select id="catSelect" onchange="checkCustomCategory(this.value)">
+              <!-- Options populated dynamically based on type -->
+            </select>
+          </div>
+
+          <div class="form-group flex-1" id="customCatGroup" style="display: none;">
+            <label for="customCatInput">Custom Category</label>
+            <input type="text" id="customCatInput" placeholder="New category name">
+          </div>
+        </div>
+
+        <!-- Date Input -->
+        <div class="form-group">
+          <label for="dateInput">Date</label>
+          <input type="date" id="dateInput" required>
+        </div>
+
+        <!-- Modal Actions -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Save to Database</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
+

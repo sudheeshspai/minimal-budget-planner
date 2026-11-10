@@ -1,0 +1,13 @@
+{
+  "name": "minimal-budget-planner",
+  "version": "1.0.0",
+  "description": "Minimalist Budget Planner with SQLite Database",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": ["budget", "planner", "sqlite", "finance"],
+  "author": "",
+  "license": "MIT"
+}
+
