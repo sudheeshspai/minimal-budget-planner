@@ -287,6 +287,7 @@ async function clearAllData() {
   try {
     const res = await fetch('/api/clear', { method: 'POST' });
     if (res.ok) {
+      localStorage.removeItem('budget_persistent_backup');
       showToast('Database cleared successfully!');
       currentCategory = 'all';
       currentSearch = '';
@@ -302,6 +303,72 @@ async function clearAllData() {
   }
 }
 
+// Download JSON Backup
+async function downloadJsonBackup() {
+  try {
+    const res = await fetch('/api/transactions?limit=10000');
+    const transactions = await res.json();
+    const backupObj = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      currency: currentCurrency,
+      transactions
+    };
+    const blob = new Blob([JSON.stringify(backupObj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `budget-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Backup downloaded successfully! 💾');
+  } catch (err) {
+    console.error('Backup download failed:', err);
+    showToast('Failed to download backup');
+  }
+}
+
+// Restore from JSON Backup
+async function handleRestoreFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const txs = Array.isArray(data) ? data : data.transactions;
+      if (!Array.isArray(txs)) {
+        showToast('Invalid backup file format');
+        return;
+      }
+      const syncRes = await fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactions: txs,
+          currency: data.currency || currentCurrency
+        })
+      });
+      if (syncRes.ok) {
+        localStorage.setItem('budget_persistent_backup', JSON.stringify(txs));
+        showToast(`Restored ${txs.length} transactions successfully! 🎉`);
+        await loadAllData();
+      } else {
+        showToast('Failed to restore transactions on server');
+      }
+    } catch (err) {
+      console.error('Restore error:', err);
+      showToast('Error reading backup file');
+    } finally {
+      input.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
 // Load Transactions
 async function loadTransactions() {
   const listEl = document.getElementById('transactionsList');
@@ -314,6 +381,36 @@ async function loadTransactions() {
 
     const res = await fetch(`/api/transactions?${params.toString()}`);
     const transactions = await res.json();
+
+    // Auto-backup & Auto-restore resilience
+    const isBaseView = currentTab === 'all' && (!currentCategory || currentCategory === 'all') && !currentMonth && !currentSearch;
+    if (isBaseView) {
+      if (transactions && transactions.length > 0) {
+        localStorage.setItem('budget_persistent_backup', JSON.stringify(transactions));
+      } else {
+        // If server returns empty, check if cloud host wiped the disk and restore from local backup
+        const savedBackup = localStorage.getItem('budget_persistent_backup');
+        if (savedBackup) {
+          try {
+            const parsed = JSON.parse(savedBackup);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              console.log('Cloud restart detected. Auto-restoring from browser backup...');
+              const syncRes = await fetch('/api/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transactions: parsed, currency: currentCurrency })
+              });
+              if (syncRes.ok) {
+                showToast('Data auto-restored after cloud restart! 🛡️');
+                return loadAllData();
+              }
+            }
+          } catch (e) {
+            console.error('Error parsing backup:', e);
+          }
+        }
+      }
+    }
 
     if (!transactions || transactions.length === 0) {
       listEl.innerHTML = `

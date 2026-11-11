@@ -153,6 +153,21 @@ const server = http.createServer(async (req, res) => {
       return sendJson(res, 200, { success: true });
     }
 
+    // POST /api/sync (Auto-restore / sync from client backup)
+    if (pathname === '/api/sync' && method === 'POST') {
+      const body = await parseJsonBody(req);
+      if (Array.isArray(body.transactions)) {
+        db.syncTransactions(body.transactions);
+      }
+      if (body.currency) {
+        db.setSetting('currency', body.currency);
+      }
+      if (body.monthlyBudget !== undefined) {
+        db.setSetting('monthly_budget', body.monthlyBudget);
+      }
+      return sendJson(res, 200, { success: true, count: Array.isArray(body.transactions) ? body.transactions.length : 0 });
+    }
+
     // GET /api/categories
     if (pathname === '/api/categories' && method === 'GET') {
       const categories = db.getAllCategories();

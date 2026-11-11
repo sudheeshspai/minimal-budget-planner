@@ -96,6 +96,32 @@ module.exports = {
     return true;
   },
 
+  syncTransactions(transactions) {
+    db.exec('BEGIN TRANSACTION;');
+    try {
+      db.exec('DELETE FROM transactions;');
+      const stmt = db.prepare(`
+        INSERT INTO transactions (id, type, category, description, amount, date)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      for (const t of transactions) {
+        stmt.run(
+          t.id ? Number(t.id) : null,
+          t.type,
+          t.category ? t.category.trim() : (t.type === 'income' ? 'Income' : 'General'),
+          t.description ? t.description.trim() : (t.type === 'income' ? 'Added Money' : 'Expense'),
+          Number(t.amount) || 0,
+          t.date || new Date().toISOString().split('T')[0]
+        );
+      }
+      db.exec('COMMIT;');
+      return true;
+    } catch (err) {
+      db.exec('ROLLBACK;');
+      throw err;
+    }
+  },
+
   updateTransaction(id, { type, category, description, amount, date }) {
     const formattedDate = date || new Date().toISOString().split('T')[0];
     const stmt = db.prepare(`
